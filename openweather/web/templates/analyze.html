@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/style.css') }}">
+</head>
+<body>
+    <header>
+        <h1>OpenWeather</h1>
+        <nav>
+            <ul>
+                <li><a href="/">Forecast</a></li>
+                <li><a href="/analyze" class="active">Analyze</a></li>
+            </ul>
+        </nav>
+    </header>
+    
+    <main>
+        <section class="analyze-form">
+            <h2>Weather Analysis</h2>
+            <p>Ask any weather-related question and get an intelligent analysis.</p>
+            
+            <form action="/analyze" method="post">
+                <div class="form-group">
+                    <label for="query">Your Question:</label>
+                    <textarea id="query" name="query" rows="3" required placeholder="E.g., Should I take an umbrella tomorrow? What clothes should I wear this weekend?"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="location">Location:</label>
+                    <input type="text" id="location" name="location" required value="{{ default_location }}">
+                    <small>City name or latitude,longitude</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="provider">LLM Provider:</label>
+                    <select id="provider" name="provider">
+                        <option value="">Default</option>
+                        {% for provider in providers %}
+                        <option value="{{ provider }}">{{ provider }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <button type="submit" class="btn">Analyze Weather</button>
+            </form>
+        </section>
+    </main>
+    
+    <footer>
+        <p>OpenWeather - A Complete Weather Analytics Platform</p>
+    </footer>
+</body>
+</html>

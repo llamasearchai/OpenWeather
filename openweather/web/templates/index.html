@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/style.css') }}">
+</head>
+<body>
+    <header>
+        <h1>OpenWeather</h1>
+        <nav>
+            <ul>
+                <li><a href="/" class="active">Forecast</a></li>
+                <li><a href="/analyze">Analyze</a></li>
+            </ul>
+        </nav>
+    </header>
+    
+    <main>
+        <section class="forecast-form">
+            <h2>Get Weather Forecast</h2>
+            <form action="/forecast" method="post">
+                <div class="form-group">
+                    <label for="location">Location:</label>
+                    <input type="text" id="location" name="location" required value="{{ default_location }}">
+                    <small>City name or latitude,longitude</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="days">Days:</label>
+                    <input type="number" id="days" name="days" min="1" max="16" value="{{ default_days }}">
+                </div>
+                
+                <div class="form-group checkbox">
+                    <input type="checkbox" id="explain" name="explain">
+                    <label for="explain">Include LLM explanation</label>
+                </div>
+                
+                <div class="form-group">
+                    <label for="provider">LLM Provider:</label>
+                    <select id="provider" name="provider">
+                        <option value="">Default ({{ default_provider }})</option>
+                        {% for provider in providers %}
+                        <option value="{{ provider }}">{{ provider }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <button type="submit" class="btn">Get Forecast</button>
+            </form>
+        </section>
+    </main>
+    
+    <footer>
+        <p>OpenWeather - A Complete Weather Analytics Platform</p>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Monitoring - OpenWeather Platform</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Plotly.js -->
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    
+    <!-- Custom CSS -->
+    <link href="/static/css/dashboard.css" rel="stylesheet">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-cloud-sun"></i> OpenWeather Platform
+            </a>
+            
+            <div class="collapse navbar-collapse">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/">Dashboard</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/monitoring">Monitoring</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/weather">Weather</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/analytics">Analytics</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/drone">Drone Ops</a>
+                    </li>
+                </ul>
+                
+                <div class="navbar-text">
+                    <small class="text-light">
+                        <i class="fas fa-clock"></i> <span id="current-time"></span>
+                    </small>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container-fluid mt-4">
+        <!-- Page Header -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h2 class="mb-0">
+                            <i class="fas fa-chart-line text-primary"></i>
+                            System Monitoring
+                        </h2>
+                        <p class="text-muted mb-0">Real-time system metrics and performance monitoring</p>
+                    </div>
+                    <div>
+                        <button class="btn btn-outline-primary btn-sm me-2" onclick="refreshMetrics()">
+                            <i class="fas fa-sync-alt"></i> Refresh
+                        </button>
+                        <button class="btn btn-outline-secondary btn-sm" onclick="exportMetrics()">
+                            <i class="fas fa-download"></i> Export
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Alert Status -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card border-0 shadow-sm" id="alerts-card">
+                    <div class="card-header bg-transparent">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-exclamation-triangle text-warning"></i> Active Alerts
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="alerts-container">
+                            <div class="text-center text-muted">
+                                <i class="fas fa-spinner fa-spin"></i> Loading alerts...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- System Resources -->
+        <div class="row mb-4">
+            <div class="col-xl-3 col-md-6 mb-3">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-body text-center">
+                        <div class="mb-3">
+                            <canvas id="cpu-chart" width="120" height="120"></canvas>
+                        </div>
+                        <h6 class="card-title">CPU Usage</h6>
+                        <p class="card-text">
+                            <span class="h4" id="cpu-value">--</span>%
+                        </p>
+                        <small class="text-muted">Current load average</small>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-xl-3 col-md-6 mb-3">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-body text-center">
+                        <div class="mb-3">
+                            <canvas id="memory-chart" width="120" height="120"></canvas>
+                        </div>
+                        <h6 class="card-title">Memory Usage</h6>
+                        <p class="card-text">
+                            <span class="h4" id="memory-value">--</span>%
+                        </p>
+                        <small class="text-muted">Available: <span id="memory-available">--</span> GB</small>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-xl-3 col-md-6 mb-3">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-body text-center">
+                        <div class="mb-3">
+                            <canvas id="disk-chart" width="120" height="120"></canvas>
+                        </div>
+                        <h6 class="card-title">Disk Usage</h6>
+                        <p class="card-text">
+                            <span class="h4" id="disk-value">--</span>%
+                        </p>
+                        <small class="text-muted">Free: <span id="disk-free">--</span> GB</small>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-xl-3 col-md-6 mb-3">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-body text-center">
+                        <div class="mb-3">
+                            <canvas id="network-chart" width="120" height="120"></canvas>
+                        </div>
+                        <h6 class="card-title">Network I/O</h6>
+                        <p class="card-text">
+                            <span class="h4" id="network-value">--</span> MB/s
+                        </p>
+                        <small class="text-muted">Throughput rate</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Performance Metrics -->
+        <div class="row mb-4">
+            <div class="col-lg-8">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-header bg-transparent">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-tachometer-alt text-info"></i> Performance Metrics
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="performance-chart" style="height: 400px;">
+                            <div class="d-flex justify-content-center align-items-center h-100">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-lg-4">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-header bg-transparent">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-list-ul text-secondary"></i> Service Status
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="service-status">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <span><i class="fas fa-server me-2"></i>API Service</span>
+                                <span class="badge bg-success" id="api-service-status">Online</span>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <span><i class="fas fa-cloud me-2"></i>Weather Service</span>
+                                <span class="badge bg-success" id="weather-service-status">Active</span>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <span><i class="fas fa-chart-bar me-2"></i>Analytics Service</span>
+                                <span class="badge bg-success" id="analytics-service-status">Running</span>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <span><i class="fas fa-database me-2"></i>Cache Service</span>
+                                <span class="badge bg-success" id="cache-service-status">Active</span>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <span><i class="fas fa-eye me-2"></i>Monitoring</span>
+                                <span class="badge bg-success" id="monitoring-service-status">Running</span>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span><i class="fas fa-helicopter me-2"></i>Drone Service</span>
+                                <span class="badge bg-warning" id="drone-service-status">Standby</span>
+                            </div>
+                        </div>
+                        
+                        <hr>
+                        
+                        <div class="text-center">
+                            <h6 class="text-muted mb-3">System Health Score</h6>
+                            <div class="position-relative">
+                                <canvas id="health-score-chart" width="150" height="150"></canvas>
+                                <div class="position-absolute top-50 start-50 translate-middle">
+                                    <div class="text-center">
+                                        <span class="h3" id="health-score">98</span>
+                                        <small class="d-block text-muted">%</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Request Analytics -->
+        <div class="row mb-4">
+            <div class="col-lg-6">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-transparent">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-exchange-alt text-success"></i> Request Analytics
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="request-chart" style="height: 300px;">
+                            <div class="d-flex justify-content-center align-items-center h-100">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-lg-6">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-transparent">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-clock text-warning"></i> Response Times
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="response-time-chart" style="height: 300px;">
+                            <div class="d-flex justify-content-center align-items-center h-100">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Error Logs -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-transparent">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-bug text-danger"></i> Recent Errors
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover" id="error-logs-table">
+                                <thead>
+                                    <tr>
+                                        <th>Timestamp</th>
+                                        <th>Level</th>
+                                        <th>Service</th>
+                                        <th>Message</th>
+                                        <th>Count</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td colspan="5" class="text-center text-muted">
+                                            <i class="fas fa-spinner fa-spin"></i> Loading error logs...
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Custom JavaScript -->
+    <script>
+        let charts = {};
+        let updateInterval;
+
+        // Initialize monitoring dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeCharts();
+            loadInitialData();
+            startAutoRefresh();
+            updateCurrentTime();
+            setInterval(updateCurrentTime, 1000);
+        });
+
+        function initializeCharts() {
+            // CPU Chart
+            charts.cpu = new Chart(document.getElementById('cpu-chart'), {
+                type: 'doughnut',
+                data: {
+                    datasets: [{
+                        data: [0, 100],
+                        backgroundColor: ['#28a745', '#e9ecef'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '75%',
+                    plugins: { legend: { display: false } }
+                }
+            });
+
+            // Memory Chart
+            charts.memory = new Chart(document.getElementById('memory-chart'), {
+                type: 'doughnut',
+                data: {
+                    datasets: [{
+                        data: [0, 100],
+                        backgroundColor: ['#17a2b8', '#e9ecef'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '75%',
+                    plugins: { legend: { display: false } }
+                }
+            });
+
+            // Disk Chart
+            charts.disk = new Chart(document.getElementById('disk-chart'), {
+                type: 'doughnut',
+                data: {
+                    datasets: [{
+                        data: [0, 100],
+                        backgroundColor: ['#ffc107', '#e9ecef'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '75%',
+                    plugins: { legend: { display: false } }
+                }
+            });
+
+            // Network Chart
+            charts.network = new Chart(document.getElementById('network-chart'), {
+                type: 'doughnut',
+                data: {
+                    datasets: [{
+                        data: [0, 100],
+                        backgroundColor: ['#6610f2', '#e9ecef'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '75%',
+                    plugins: { legend: { display: false } }
+                }
+            });
+
+            // Health Score Chart
+            charts.health = new Chart(document.getElementById('health-score-chart'), {
+                type: 'doughnut',
+                data: {
+                    datasets: [{
+                        data: [98, 2],
+                        backgroundColor: ['#28a745', '#e9ecef'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '80%',
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+
+        async function loadInitialData() {
+            try {
+                // Load monitoring data
+                const response = await fetch('/api/v1/monitoring/dashboard');
+                const data = await response.json();
+                updateDashboard(data);
+                
+                // Load performance charts
+                await loadPerformanceChart();
+                await loadRequestChart();
+                await loadResponseTimeChart();
+                await loadErrorLogs();
+                
+            } catch (error) {
+                console.error('Error loading monitoring data:', error);
+                showError('Failed to load monitoring data');
+            }
+        }
+
+        function updateDashboard(data) {
+            // Update system metrics
+            if (data.system_metrics) {
+                updateSystemMetrics(data.system_metrics);
+            }
+            
+            // Update alerts
+            if (data.active_alerts) {
+                updateAlerts(data.active_alerts);
+            }
+            
+            // Update service status
+            updateServiceStatus(data.health || {});
+        }
+
+        function updateSystemMetrics(metrics) {
+            const cpu = metrics['system.cpu.usage_percent']?.current_value || 0;
+            const memory = metrics['system.memory.usage_percent']?.current_value || 0;
+            const disk = metrics['system.disk.usage_percent']?.current_value || 0;
+            const network = Math.min(metrics['system.network.bytes_sent']?.current_value || 0, 100);
+
+            // Update charts
+            charts.cpu.data.datasets[0].data = [cpu, 100 - cpu];
+            charts.cpu.update();
+            document.getElementById('cpu-value').textContent = cpu.toFixed(1);
+
+            charts.memory.data.datasets[0].data = [memory, 100 - memory];
+            charts.memory.update();
+            document.getElementById('memory-value').textContent = memory.toFixed(1);
+
+            charts.disk.data.datasets[0].data = [disk, 100 - disk];
+            charts.disk.update();
+            document.getElementById('disk-value').textContent = disk.toFixed(1);
+
+            charts.network.data.datasets[0].data = [network, 100 - network];
+            charts.network.update();
+            document.getElementById('network-value').textContent = network.toFixed(1);
+
+            // Update chart colors based on values
+            updateChartColor(charts.cpu, cpu);
+            updateChartColor(charts.memory, memory);
+            updateChartColor(charts.disk, disk);
+        }
+
+        function updateChartColor(chart, value) {
+            let color = '#28a745'; // Green
+            if (value > 80) color = '#dc3545'; // Red
+            else if (value > 60) color = '#ffc107'; // Yellow
+            
+            chart.data.datasets[0].backgroundColor[0] = color;
+            chart.update();
+        }
+
+        function updateAlerts(alerts) {
+            const container = document.getElementById('alerts-container');
+            
+            if (alerts.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center text-success">
+                        <i class="fas fa-check-circle fa-2x mb-2"></i>
+                        <p class="mb-0">No active alerts - System running normally</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = alerts.map(alert => `
+                <div class="alert alert-${getSeverityClass(alert.level)} alert-dismissible fade show">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h6 class="alert-heading mb-1">
+                                <i class="fas fa-${getSeverityIcon(alert.level)} me-2"></i>
+                                ${alert.rule}
+                            </h6>
+                            <p class="mb-1">${alert.message}</p>
+                            <small class="text-muted">
+                                <i class="fas fa-clock me-1"></i>
+                                ${new Date(alert.timestamp).toLocaleString()}
+                            </small>
+                        </div>
+                        <span class="badge bg-${getSeverityClass(alert.level)}">${alert.level.toUpperCase()}</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function getSeverityClass(level) {
+            switch(level) {
+                case 'critical': return 'danger';
+                case 'warning': return 'warning';
+                case 'info': return 'info';
+                default: return 'secondary';
+            }
+        }
+
+        function getSeverityIcon(level) {
+            switch(level) {
+                case 'critical': return 'exclamation-triangle';
+                case 'warning': return 'exclamation-circle';
+                case 'info': return 'info-circle';
+                default: return 'bell';
+            }
+        }
+
+        function updateServiceStatus(health) {
+            // This would update service status indicators
+            // Implementation depends on the health data structure
+        }
+
+        async function loadPerformanceChart() {
+            // Implementation for performance metrics chart
+            const chartDiv = document.getElementById('performance-chart');
+            
+            // Sample data - replace with actual API call
+            const trace = {
+                x: ['00:00', '01:00', '02:00', '03:00', '04:00', '05:00'],
+                y: [20, 25, 18, 30, 28, 22],
+                type: 'scatter',
+                mode: 'lines+markers',
+                name: 'Response Time (ms)'
+            };
+            
+            Plotly.newPlot(chartDiv, [trace], {
+                title: 'Performance Over Time',
+                xaxis: { title: 'Time' },
+                yaxis: { title: 'Response Time (ms)' }
+            });
+        }
+
+        async function loadRequestChart() {
+            // Implementation for request analytics chart
+        }
+
+        async function loadResponseTimeChart() {
+            // Implementation for response time chart
+        }
+
+        async function loadErrorLogs() {
+            // Implementation for error logs table
+            const tbody = document.querySelector('#error-logs-table tbody');
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="5" class="text-center text-success">
+                        <i class="fas fa-check-circle me-2"></i>
+                        No recent errors
+                    </td>
+                </tr>
+            `;
+        }
+
+        function startAutoRefresh() {
+            updateInterval = setInterval(loadInitialData, 30000); // Refresh every 30 seconds
+        }
+
+        function refreshMetrics() {
+            loadInitialData();
+        }
+
+        function exportMetrics() {
+            // Implementation for exporting metrics
+            alert('Export functionality would be implemented here');
+        }
+
+        function updateCurrentTime() {
+            document.getElementById('current-time').textContent = new Date().toLocaleString();
+        }
+
+        function showError(message) {
+            // Implementation for showing error messages
+            console.error(message);
+        }
+    </script>
+</body>
+</html> 

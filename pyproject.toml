@@ -1,0 +1,383 @@
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+name = "openweather"
+version = "3.0.0"
+description = "Enterprise-Grade Weather Analytics Platform with AI, Drone Support, and Advanced Forecasting"
+authors = ["OpenWeather Team <team@openweather.ai>"]
+license = "MIT"
+readme = "README.md"
+homepage = "https://github.com/openweather/openweather"
+repository = "https://github.com/openweather/openweather"
+documentation = "https://openweather.readthedocs.io"
+keywords = ["weather", "forecast", "ai", "meteorology", "drones", "iot", "analytics", "enterprise"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Atmospheric Science",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: System :: Monitoring",
+    "Topic :: Internet :: WWW/HTTP :: HTTP Servers",
+]
+
+[tool.poetry.dependencies]
+python = "^3.9"
+
+# Core Framework
+fastapi = "^0.104.0"
+uvicorn = {extras = ["standard"], version = "^0.24.0"}
+pydantic = "^2.5.0"
+pydantic-settings = "^2.1.0"
+httpx = "^0.25.0"
+aiofiles = "^23.2.0"
+websockets = "^12.0"
+
+# CLI and Rich UI
+typer = {extras = ["rich"], version = "^0.9.0"}
+rich = "^13.7.0"
+click = "^8.1.7"
+textual = "^0.44.0"
+
+# Scientific Computing & ML
+numpy = "^1.24.0"
+pandas = "^2.1.0"
+scipy = "^1.11.0"
+scikit-learn = "^1.3.0"
+xarray = "^2023.10.0"
+netcdf4 = "^1.6.0"
+matplotlib = "^3.7.0"
+seaborn = "^0.13.0"
+plotly = "^5.17.0"
+bokeh = "^3.3.0"
+
+# Advanced AI & LLM
+openai = "^1.3.0"
+anthropic = "^0.7.0"
+langchain = "^0.0.350"
+langchain-core = "^0.1.0"
+langchain-community = "^0.0.5"
+sentence-transformers = "^2.2.0"
+transformers = "^4.35.0"
+torch = "^2.1.0"
+huggingface-hub = "^0.19.0"
+ollama-python = "^0.1.7"
+
+# Vector Store & Embeddings
+chromadb = "^0.4.18"
+faiss-cpu = "^1.7.4"
+pinecone-client = "^2.2.4"
+
+# MLX support (Apple Silicon)
+mlx = {version = "^0.0.8", optional = true, markers = "platform_machine == 'arm64' and sys_platform == 'darwin'"}
+mlx-lm = {version = "^0.0.8", optional = true, markers = "platform_machine == 'arm64' and sys_platform == 'darwin'"}
+
+# Database & Caching
+sqlite-utils = "^3.35.0"
+aiosqlite = "^0.19.0"
+redis = "^5.0.0"
+redis-om = "^0.2.1"
+sqlalchemy = "^2.0.0"
+alembic = "^1.13.0"
+datasette = "^0.64.0"
+
+# Time Series & Weather Data
+pytz = "^2023.3"
+timezonefinder = "^6.2.0"
+geopy = "^2.4.0"
+meteostat = "^1.6.5"
+cftime = "^1.6.3"
+
+# Drone & IoT Support
+pymavlink = "^2.4.37"
+dronekit = "^2.9.2"
+paho-mqtt = "^1.6.1"
+influxdb-client = "^1.38.0"
+pyserial = "^3.5"
+
+# Computer Vision (for drone image analysis)
+opencv-python = "^4.8.0"
+pillow = "^10.1.0"
+
+# Configuration & Utilities
+python-dotenv = "^1.0.0"
+pyyaml = "^6.0.1"
+toml = "^0.10.2"
+jsonschema = "^4.20.0"
+marshmallow = "^3.20.0"
+celery = "^5.3.0"
+python-multipart = "^0.0.6"
+
+# Security & Authentication
+cryptography = "^41.0.0"
+pyjwt = "^2.8.0"
+passlib = {extras = ["bcrypt"], version = "^1.7.4"}
+python-jose = {extras = ["cryptography"], version = "^3.3.0"}
+
+# Monitoring & Observability
+structlog = "^23.2.0"
+prometheus-client = "^0.19.0"
+opentelemetry-api = "^1.21.0"
+opentelemetry-sdk = "^1.21.0"
+opentelemetry-instrumentation-fastapi = "^0.42b0"
+opentelemetry-instrumentation-httpx = "^0.42b0"
+sentry-sdk = {extras = ["fastapi"], version = "^1.38.0"}
+
+# API & Web
+jinja2 = "^3.1.2"
+starlette = "^0.27.0"
+python-multipart = "^0.0.6"
+itsdangerous = "^2.1.2"
+
+# Testing (included in main deps for CI/CD)
+pytest = "^7.4.0"
+pytest-asyncio = "^0.21.0"
+pytest-cov = "^4.1.0"
+pytest-mock = "^3.12.0"
+pytest-xdist = "^3.5.0"
+pytest-benchmark = "^4.0.0"
+hypothesis = "^6.92.0"
+factory-boy = "^3.3.0"
+respx = "^0.20.0"
+
+[tool.poetry.extras]
+mlx = ["mlx", "mlx-lm"]
+full = ["mlx", "mlx-lm", "faiss-cpu", "pinecone-client"]
+monitoring = ["prometheus-client", "opentelemetry-api", "opentelemetry-sdk", "sentry-sdk"]
+drone = ["pymavlink", "dronekit", "opencv-python"]
+enterprise = ["mlx", "mlx-lm", "faiss-cpu", "pinecone-client", "prometheus-client", "sentry-sdk"]
+
+[tool.poetry.group.dev.dependencies]
+# Code quality
+black = "^23.11.0"
+isort = "^5.12.0"
+flake8 = "^6.1.0"
+mypy = "^1.7.0"
+pylint = "^3.0.0"
+bandit = "^1.7.5"
+safety = "^2.3.0"
+ruff = "^0.1.6"
+
+# Documentation
+mkdocs = "^1.5.0"
+mkdocs-material = "^9.4.0"
+mkdocs-mermaid2-plugin = "^1.1.0"
+sphinx = "^7.2.0"
+sphinx-rtd-theme = "^1.3.0"
+sphinx-autodoc-typehints = "^1.25.0"
+
+# Development tools
+pre-commit = "^3.5.0"
+tox = "^4.11.0"
+invoke = "^2.2.0"
+cookiecutter = "^2.5.0"
+jupyter = "^1.0.0"
+ipykernel = "^6.26.0"
+
+[tool.poetry.scripts]
+openweather = "openweather.cli.main:app_cli"
+openweather-api = "openweather.api.main:main"
+openweather-agent = "openweather.agents.main:main"
+openweather-admin = "openweather.admin.main:admin_cli"
+openweather-drone = "openweather.drone.main:drone_cli"
+openweather-monitor = "openweather.monitoring.main:monitor_cli"
+
+[tool.poetry.plugins."openweather.data_sources"]
+openmeteo = "openweather.data.sources.openmeteo:OpenMeteoClient"
+noaa = "openweather.data.sources.noaa:NOAAClient"
+ecmwf = "openweather.data.sources.ecmwf:ECMWFClient"
+simulation = "openweather.data.sources.simulation:SimulationDataSource"
+drone_sensors = "openweather.drone.sensors:DroneSensorDataSource"
+
+[tool.poetry.plugins."openweather.llm_providers"]
+ollama = "openweather.llm.providers.ollama:OllamaProvider"
+openai = "openweather.llm.providers.openai:OpenAIProvider"
+anthropic = "openweather.llm.providers.anthropic:AnthropicProvider"
+huggingface = "openweather.llm.providers.huggingface:HuggingFaceProvider"
+local = "openweather.llm.providers.local:LocalProvider"
+
+[tool.black]
+line-length = 120
+target-version = ['py39', 'py310', 'py311', 'py312']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # directories
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | \.pytest_cache
+  | build
+  | dist
+  | __pycache__
+)/
+'''
+
+[tool.isort]
+profile = "black"
+line_length = 120
+multi_line_output = 3
+include_trailing_comma = true
+force_grid_wrap = 0
+use_parentheses = true
+ensure_newline_before_comments = true
+known_first_party = ["openweather"]
+known_third_party = ["fastapi", "pydantic", "numpy", "pandas", "pytest"]
+
+[tool.mypy]
+python_version = "3.9"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+strict_equality = true
+show_error_codes = true
+plugins = ["pydantic.mypy"]
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+disallow_untyped_defs = false
+
+[[tool.mypy.overrides]]
+module = [
+    "dronekit.*",
+    "pymavlink.*",
+    "cv2.*",
+    "matplotlib.*",
+    "seaborn.*",
+    "plotly.*",
+    "bokeh.*"
+]
+ignore_missing_imports = true
+
+[tool.ruff]
+line-length = 120
+target-version = "py39"
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "C",   # flake8-comprehensions
+    "B",   # flake8-bugbear
+    "N",   # pep8-naming
+    "D",   # pydocstyle
+    "UP",  # pyupgrade
+    "S",   # bandit
+    "ANN", # flake8-annotations
+    "ASYNC", # flake8-async
+    "COM", # flake8-commas
+    "PIE", # flake8-pie
+    "PT",  # flake8-pytest-style
+    "RSE", # flake8-raise
+    "RET", # flake8-return
+    "SIM", # flake8-simplify
+    "TCH", # flake8-type-checking
+    "ARG", # flake8-unused-arguments
+    "PTH", # flake8-use-pathlib
+    "ERA", # eradicate
+    "PD",  # pandas-vet
+    "PL",  # pylint
+    "TRY", # tryceratops
+    "FLY", # flynt
+    "NPY", # numpy
+    "PERF", # perflint
+    "FURB", # refurb
+    "LOG",  # flake8-logging
+    "RUF",  # ruff-specific
+]
+ignore = [
+    "D203", "D212",  # One blank line before class docstring
+    "ANN101", "ANN102",  # Missing type annotation for self/cls
+    "ANN002", "ANN003",  # Missing type annotation for *args/**kwargs
+    "S101",  # Use of assert
+    "PLR0913",  # Too many arguments
+    "PLR0915",  # Too many statements
+    "C901",  # Complex structure
+    "PLR0912",  # Too many branches
+]
+
+[tool.ruff.pydocstyle]
+convention = "google"
+
+[tool.pylint.messages_control]
+disable = [
+    "too-few-public-methods",
+    "too-many-arguments",
+    "too-many-instance-attributes",
+    "too-many-locals",
+    "duplicate-code",
+    "import-error",
+    "missing-module-docstring"
+]
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+addopts = [
+    "-v",
+    "--strict-markers",
+    "--strict-config",
+    "--cov=openweather",
+    "--cov-report=term-missing",
+    "--cov-report=html:htmlcov",
+    "--cov-report=xml",
+    "--cov-fail-under=85",
+    "--tb=short"
+]
+testpaths = ["tests"]
+filterwarnings = [
+    "error",
+    "ignore::UserWarning",
+    "ignore::DeprecationWarning",
+    "ignore::PendingDeprecationWarning",
+]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+    "unit: marks tests as unit tests",
+    "api: marks tests as API tests",
+    "drone: marks tests as drone-related tests",
+    "llm: marks tests as LLM-related tests",
+    "requires_gpu: marks tests that require GPU",
+    "requires_internet: marks tests that require internet connection",
+]
+
+[tool.coverage.run]
+source = ["openweather"]
+omit = [
+    "*/tests/*",
+    "*/test_*",
+    "*/__pycache__/*",
+    "*/migrations/*"
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+] 

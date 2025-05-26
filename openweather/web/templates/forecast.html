@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/style.css') }}">
+</head>
+<body>
+    <header>
+        <h1>OpenWeather</h1>
+        <nav>
+            <ul>
+                <li><a href="/" class="active">Forecast</a></li>
+                <li><a href="/analyze">Analyze</a></li>
+            </ul>
+        </nav>
+    </header>
+    
+    <main>
+        <section class="forecast-result">
+            <h2>Weather Forecast for {{ forecast.location.name }}</h2>
+            <p class="coordinates">Coordinates: {{ forecast.location.coordinates.latitude }}, {{ forecast.location.coordinates.longitude }}</p>
+            <p class="data-source">Data Source: {{ forecast.data_source }}</p>
+            
+            {% if forecast.current_weather %}
+            <div class="current-weather">
+                <h3>Current Weather</h3>
+                <p class="temperature">{{ forecast.current_weather.temp_celsius }}°C
+                    {% if forecast.current_weather.feels_like_celsius %}
+                    <span class="feels-like">(feels like {{ forecast.current_weather.feels_like_celsius }}°C)</span>
+                    {% endif %}
+                </p>
+                
+                <p class="condition">{{ forecast.current_weather.condition_text }}</p>
+                
+                <div class="details">
+                    {% if forecast.current_weather.wind_speed_kph %}
+                    <p>Wind: {{ forecast.current_weather.wind_speed_kph }} km/h
+                        {% if forecast.current_weather.wind_direction_cardinal %}
+                        from {{ forecast.current_weather.wind_direction_cardinal }}
+                        {% endif %}
+                    </p>
+                    {% endif %}
+                    
+                    {% if forecast.current_weather.humidity_percent %}
+                    <p>Humidity: {{ forecast.current_weather.humidity_percent }}%</p>
+                    {% endif %}
+                    
+                    {% if forecast.current_weather.pressure_mb %}
+                    <p>Pressure: {{ forecast.current_weather.pressure_mb }} mb</p>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+            
+            <div class="daily-forecasts">
+                <h3>Daily Forecasts</h3>
+                <div class="forecast-grid">
+                    {% for day in forecast.daily_forecasts %}
+                    <div class="forecast-day">
+                        <h4>{{ day.date }}</h4>
+                        <p class="temperature">{{ day.temp_min_celsius }}°C to {{ day.temp_max_celsius }}°C</p>
+                        <p class="condition">{{ day.condition_text }}</p>
+                        
+                        {% if day.precipitation_mm and day.precipitation_mm > 0 %}
+                        <p class="precipitation">Precipitation: {{ day.precipitation_mm }}mm
+                            {% if day.precipitation_chance_percent %}
+                            ({{ day.precipitation_chance_percent }}% chance)
+                            {% endif %}
+                        </p>
+                        {% endif %}
+                        
+                        {% if day.wind_speed_kph %}
+                        <p class="wind">Wind: {{ day.wind_speed_kph }} km/h
+                            {% if day.wind_direction_cardinal %}
+                            from {{ day.wind_direction_cardinal }}
+                            {% endif %}
+                        </p>
+                        {% endif %}
+                        
+                        {% if day.uv_index %}
+                        <p class="uv">UV Index: {{ day.uv_index }}</p>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            
+            {% if analysis %}
+            <div class="llm-analysis">
+                <h3>LLM Analysis ({{ analysis.provider_used }}/{{ analysis.model_used }})</h3>
+                <div class="analysis-content">
+                    {{ analysis.analysis_text | safe }}
+                </div>
+                {% if analysis.tokens_used %}
+                <p class="tokens">
+                    Tokens: {{ analysis.tokens_used.prompt_tokens }} prompt + 
+                    {{ analysis.tokens_used.completion_tokens }} completion = 
+                    {{ analysis.tokens_used.total_tokens }} total
+                </p>
+                {% endif %}
+            </div>
+            {% endif %}
+            
+            <div class="actions">
+                <a href="/" class="btn">New Forecast</a>
+            </div>
+        </section>
+    </main>
+    
+    <footer>
+        <p>OpenWeather - A Complete Weather Analytics Platform</p>
+    </footer>
+</body>
+</html>

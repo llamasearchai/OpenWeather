@@ -1,0 +1,350 @@
+version: '3.8'
+
+networks:
+  openweather-network:
+    driver: bridge
+  monitoring-network:
+    driver: bridge
+
+volumes:
+  openweather-data:
+    driver: local
+  postgres-data:
+    driver: local
+  redis-data:
+    driver: local
+  ollama-data:
+    driver: local
+  prometheus-data:
+    driver: local
+  grafana-data:
+    driver: local
+  vector-store-data:
+    driver: local
+
+services:
+  # Main OpenWeather API
+  openweather-api:
+    build:
+      context: ..
+      dockerfile: deployment/Dockerfile
+      target: production
+    container_name: openweather-api
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      # Core Configuration
+      - ENVIRONMENT=production
+      - LOG_LEVEL=INFO
+      - PYTHONPATH=/app
+      
+      # Database
+      - DATABASE_URL=postgresql://openweather:${POSTGRES_PASSWORD:-openweather123}@postgres:5432/openweather
+      - REDIS_URL=redis://redis:6379/0
+      
+      # API Keys
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - HF_API_KEY=${HF_API_KEY:-}
+      
+      # LLM Configuration
+      - USE_OLLAMA=true
+      - OLLAMA_HOST=http://ollama:11434
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-llama3}
+      - USE_MLX=false
+      - DEFAULT_LLM_PROVIDER=${DEFAULT_LLM_PROVIDER:-ollama}
+      
+      # Monitoring
+      - ENABLE_MONITORING=true
+      - PROMETHEUS_GATEWAY=http://prometheus:9090
+      - SENTRY_DSN=${SENTRY_DSN:-}
+      
+      # Drone Support
+      - ENABLE_DRONE_SUPPORT=true
+      - MAVLINK_CONNECTION=${MAVLINK_CONNECTION:-tcp:drone-simulator:5760}
+      
+      # Vector Store
+      - VECTOR_STORE_PATH=/app/data/vector_store_chroma
+      - CHROMADB_HOST=chromadb
+      - CHROMADB_PORT=8001
+    volumes:
+      - openweather-data:/app/data
+      - vector-store-data:/app/data/vector_store_chroma
+    networks:
+      - openweather-network
+      - monitoring-network
+    depends_on:
+      - postgres
+      - redis
+      - ollama
+      - chromadb
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Web Dashboard
+  openweather-web:
+    build:
+      context: ..
+      dockerfile: deployment/Dockerfile.web
+    container_name: openweather-web
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - REACT_APP_API_URL=http://localhost:8000
+      - REACT_APP_WS_URL=ws://localhost:8000
+    networks:
+      - openweather-network
+    depends_on:
+      - openweather-api
+
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: openweather-postgres
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=openweather
+      - POSTGRES_USER=openweather
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-openweather123}
+      - POSTGRES_INITDB_ARGS=--encoding=UTF-8 --lc-collate=C --lc-ctype=C
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ../scripts/init-db.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - openweather-network
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U openweather -d openweather"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: openweather-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis-data:/data
+    networks:
+      - openweather-network
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  # Ollama LLM Server
+  ollama:
+    image: ollama/ollama:latest
+    container_name: openweather-ollama
+    restart: unless-stopped
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-data:/root/.ollama
+    networks:
+      - openweather-network
+    environment:
+      - OLLAMA_ORIGINS=*
+      - OLLAMA_HOST=0.0.0.0
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ChromaDB Vector Store
+  chromadb:
+    image: chromadb/chroma:latest
+    container_name: openweather-chromadb
+    restart: unless-stopped
+    ports:
+      - "8001:8000"
+    volumes:
+      - vector-store-data:/chroma/chroma
+    networks:
+      - openweather-network
+    environment:
+      - CHROMA_SERVER_HOST=0.0.0.0
+      - CHROMA_SERVER_HTTP_PORT=8000
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/heartbeat"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Drone Simulator (for testing)
+  drone-simulator:
+    image: dronekit/sitl:latest
+    container_name: openweather-drone-sim
+    restart: unless-stopped
+    ports:
+      - "5760:5760"
+    networks:
+      - openweather-network
+    command: ["mavproxy.py", "--master=tcp:0.0.0.0:5760", "--sitl=127.0.0.1:5501", "--out=127.0.0.1:14550"]
+
+  # Celery Worker for Background Tasks
+  celery-worker:
+    build:
+      context: ..
+      dockerfile: deployment/Dockerfile
+      target: production
+    container_name: openweather-celery
+    restart: unless-stopped
+    command: celery -A openweather.core.celery worker --loglevel=info --concurrency=4
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1
+      - DATABASE_URL=postgresql://openweather:${POSTGRES_PASSWORD:-openweather123}@postgres:5432/openweather
+    volumes:
+      - openweather-data:/app/data
+    networks:
+      - openweather-network
+    depends_on:
+      - redis
+      - postgres
+
+  # Celery Beat Scheduler
+  celery-beat:
+    build:
+      context: ..
+      dockerfile: deployment/Dockerfile
+      target: production
+    container_name: openweather-beat
+    restart: unless-stopped
+    command: celery -A openweather.core.celery beat --loglevel=info
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - DATABASE_URL=postgresql://openweather:${POSTGRES_PASSWORD:-openweather123}@postgres:5432/openweather
+    volumes:
+      - openweather-data:/app/data
+    networks:
+      - openweather-network
+    depends_on:
+      - redis
+      - postgres
+
+  # Prometheus Monitoring
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: openweather-prometheus
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - prometheus-data:/prometheus
+      - ../deployment/prometheus.yml:/etc/prometheus/prometheus.yml
+    networks:
+      - monitoring-network
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+      - '--web.enable-lifecycle'
+      - '--web.enable-admin-api'
+
+  # Grafana Dashboard
+  grafana:
+    image: grafana/grafana:latest
+    container_name: openweather-grafana
+    restart: unless-stopped
+    ports:
+      - "3001:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ../deployment/grafana/dashboards:/etc/grafana/provisioning/dashboards
+      - ../deployment/grafana/datasources:/etc/grafana/provisioning/datasources
+    networks:
+      - monitoring-network
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin123}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_INSTALL_PLUGINS=grafana-clock-panel,grafana-simple-json-datasource
+    depends_on:
+      - prometheus
+
+  # Node Exporter for System Metrics
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: openweather-node-exporter
+    restart: unless-stopped
+    ports:
+      - "9100:9100"
+    networks:
+      - monitoring-network
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+
+  # cAdvisor for Container Metrics
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: openweather-cadvisor
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    networks:
+      - monitoring-network
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:rw
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    privileged: true
+
+  # Nginx Reverse Proxy
+  nginx:
+    image: nginx:alpine
+    container_name: openweather-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ../deployment/nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ../deployment/nginx/ssl:/etc/nginx/ssl
+    networks:
+      - openweather-network
+    depends_on:
+      - openweather-api
+      - openweather-web
+
+  # Log Aggregation with Fluentd
+  fluentd:
+    build: ../deployment/fluentd
+    container_name: openweather-fluentd
+    restart: unless-stopped
+    volumes:
+      - /var/log:/var/log:ro
+      - ../deployment/fluentd/conf:/fluentd/etc
+    networks:
+      - monitoring-network
+    ports:
+      - "24224:24224"
+      - "24224:24224/udp"
